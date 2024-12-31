@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Child Journal</title>
+</head>
+<body>
+    <h1>Welcome to Child Journal</h1>
+
+    <!-- Navigation Links -->
+    <nav>
+        <a href="/data_entry">Go to Data Entry</a> |
+        <a href="/dashboard">View Dashboard</a>
+    </nav>
+
+    <h2>Children</h2>
+    <ul>
+        {% for child in children %}
+            <li>{{ child }} - <a href="/select_questions/{{ child }}">Edit Questions</a></li>
+        {% endfor %}
+    </ul>
+
+    <!-- Add Child Form -->
+    <h3>Add a New Child</h3>
+    <form method="POST" action="/add_child">
+        <label for="child_name">Child Name:</label>
+        <input type="text" id="child_name" name="child_name" required>
+        <button type="submit">Add Child</button>
+    </form>
+</body>
+</html>

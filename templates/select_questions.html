@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Questions for {{ child_name }}</title>
+</head>
+<body>
+    <h1>Select Questions for {{ child_name }}</h1>
+    <form method="POST">
+        <h2>Predefined Questions</h2>
+        {% for category, questions in predefined_questions.items() %}
+            <h3>{{ category }}</h3>
+            {% for question in questions %}
+                <label>
+                    <input type="checkbox" name="questions" value="{{ question }}"
+                        {% if question in selected_questions[category] %}checked{% endif %}>
+                    {{ question }}
+                </label>
+            {% endfor %}
+        {% endfor %}
+
+        <h2>Custom Questions</h2>
+        <div id="custom-questions">
+            {% for question in custom_questions %}
+                <label>
+                    <input type="text" name="custom_questions" value="{{ question }}">
+                </label>
+            {% endfor %}
+            <label>
+                <input type="text" name="custom_questions" placeholder="Enter a custom question">
+            </label>
+        </div>
+        <button type="submit">Save Questions</button>
+    </form>
+</body>
+</html>

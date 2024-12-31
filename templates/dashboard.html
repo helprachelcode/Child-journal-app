@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <a href="/">Home</a> |
+        <a href="/data_entry">Go to Data Entry</a>
+    </nav>
+    <hr>
+
+    <!-- Child Selection -->
+    <h1>Dashboard</h1>
+    <form method="POST">
+        <label for="child_name">Select Child:</label>
+        <select name="child_name" id="child_name" onchange="this.form.submit()">
+            <option value="All" {% if not selected_child or selected_child == "All" %}selected{% endif %}>All</option>
+            {% for child in children %}
+                <option value="{{ child }}" {% if child == selected_child %}selected{% endif %}>
+                    {{ child }}
+                </option>
+            {% endfor %}
+        </select>
+    </form>
+
+    <!-- Chart Display -->
+    <div>
+        {% if charts %}
+            {% for chart in charts %}
+                <h2>{{ chart.title }}</h2>
+                <img src="{{ chart.path }}" alt="Chart" style="max-width: 100%; height: auto;">
+            {% endfor %}
+        {% else %}
+            <p>No data available to display.</p>
+        {% endif %}
+    </div>
+</body>
+</html>
