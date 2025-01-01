@@ -3,60 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Data Entry</title>
+    <title>Child Data Entry</title>
 </head>
 <body>
-    <!-- Navigation Links -->
-    <nav>
-        <a href="/">Home</a> |
-        <a href="/dashboard">View Dashboard</a>
-    </nav>
-    <hr>
+    <!-- Navigation Buttons -->
+    <div style="margin-bottom: 20px;">
+        <a href="{{ url_for('index') }}">Home</a> |
+        <a href="{{ url_for('select_questions', child_name=selected_child) }}">Edit Questions</a> |
+        <a href="{{ url_for('child_dashboard', child_name=selected_child) }}">View Dashboard</a>
+    </div>
 
-    <!-- Main Content -->
-    <h1>Data Entry</h1>
-
-    <form method="POST" action="/data_entry">
-        <label for="child_name">Select Child:</label>
-        <select name="child_name" id="child_name" onchange="this.form.submit()" required>
-            {% for child in children %}
-                <option value="{{ child }}" {% if child == selected_child %}selected{% endif %}>
-                    {{ child }}
-                </option>
-            {% endfor %}
-        </select>
-    </form>
-
-    {% if questions %}
-        <form method="POST" action="/submit">
-            <h2>Questions for {{ selected_child }}</h2>
-            {% for i, question in enumerate(questions) %}
-                <label for="q{{ i }}">{{ question }}</label>
-                {% if question.lower().startswith("how many") %}
-                    <input type="number" id="q{{ i }}" name="q{{ i }}" required>
-                {% elif question.lower().startswith("did") %}
-                    <select id="q{{ i }}" name="q{{ i }}" required>
-                        <option value="">Select</option>
-                        <option value="1">Yes</option>
-                        <option value="0">No</option>
-                    </select>
-                {% elif question.lower().startswith("on a scale of 1–5") %}
-                    <select id="q{{ i }}" name="q{{ i }}" required>
-                        <option value="">Select</option>
-                        {% for rating in range(1, 6) %}
-                            <option value="{{ rating }}">{{ rating }}</option>
-                        {% endfor %}
-                    </select>
-                {% else %}
-                    <input type="text" id="q{{ i }}" name="q{{ i }}">
-                {% endif %}
-                <br><br>
-            {% endfor %}
-            <input type="hidden" name="child_name" value="{{ selected_child }}">
-            <button type="submit">Submit</button>
-        </form>
-    {% else %}
-        <p>No questions available for this child. Please add questions in the settings.</p>
+    <!-- Success Message -->
+    {% if success_message %}
+        <div style="color: green; font-weight: bold; margin-bottom: 20px;">
+            {{ success_message }}
+        </div>
     {% endif %}
+<form method="POST" action="{{ url_for('submit') }}">
+    <!-- Child selection -->
+    <label for="child_name">Select Child:</label>
+    <select name="child_name" id="child_name" onchange="this.form.action_type.value='change_child'; this.form.submit();" required>
+        {% for child in children %}
+            <option value="{{ child }}" {% if child == selected_child %}selected{% endif %}>
+                {{ child }}
+            </option>
+        {% endfor %}
+    </select>
+
+    <!-- Hidden input to specify action type -->
+    <input type="hidden" name="action_type" value="submit_data">
+
+    <!-- Questions -->
+    {% for idx, question in enumerate(questions) %}
+        <div>
+            <label for="q{{ idx }}">{{ question }}</label>
+            {% if question.lower().startswith("on a scale of 1–5") %}
+                <select name="q{{ idx }}" id="q{{ idx }}">
+                    <option value="">--Select--</option>
+                    {% for value in range(1, 6) %}
+                        <option value="{{ value }}">{{ value }}</option>
+                    {% endfor %}
+                </select>
+            {% elif question.lower().startswith("did") %}
+                <select name="q{{ idx }}" id="q{{ idx }}">
+                    <option value="">--Select--</option>
+                    <option value="1">Yes</option>
+                    <option value="0">No</option>
+                </select>
+            {% else %}
+                <input type="text" name="q{{ idx }}" id="q{{ idx }}">
+            {% endif %}
+        </div>
+    {% endfor %}
+
+    <button type="submit" onclick="this.form.action_type.value='submit_data';">Submit</button>
+</form>
 </body>
-</html>
+    </html>

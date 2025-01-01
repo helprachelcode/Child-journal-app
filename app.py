@@ -196,37 +196,61 @@ def data_entry():
         enumerate=enumerate
     )
 
-@app.route('/submit', methods=["POST"])
+@app.route('/submit', methods=["GET", "POST"])
 def submit():
     """Handle the form submission."""
-    child_name = request.form.get("child_name", "").strip()
+    success_message = None  # Initialize the success message to None
 
-    # Load questions for the selected child
-    with open(CHILD_QUESTIONS_FILE, "r") as f:
-        child_questions = json.load(f)
-    questions = child_questions.get(child_name, [])
+    if request.method == "POST":
+        action_type = request.form.get("action_type", "submit_data")
+        child_name = request.form.get("child_name", "").strip()
 
-    # Process responses
-    responses = []
-    for i, question in enumerate(questions):
-        response = request.form.get(f"q{i}", "").strip()
-        if question.lower().startswith("did"):
-            # Convert Yes/No responses to integers
-            response = int(response) if response in ["1", "0"] else None
-        elif question.lower().startswith("on a scale of 1–5"):
-            # Ensure rating is within 1–5
-            response = int(response) if response.isdigit() and 1 <= int(response) <= 5 else None
-        responses.append(response)
+        if action_type == "submit_data":
+            # Handle data submission
+            with open(CHILD_QUESTIONS_FILE, "r") as f:
+                child_questions = json.load(f)
+            questions = child_questions.get(child_name, [])
 
-    # Save the responses
-    save_to_csv(child_name, responses)
+            # Process responses
+            responses = []
+            for i, question in enumerate(questions):
+                response = request.form.get(f"q{i}", "").strip()
+                if question.lower().startswith("did"):
+                    response = int(response) if response in ["1", "0"] else None
+                elif question.lower().startswith("on a scale of 1–5"):
+                    response = int(response) if response.isdigit() and 1 <= int(response) <= 5 else None
+                responses.append(response)
 
-    return redirect(url_for("thank_you"))
-    
-@app.route('/thank_you')
-def thank_you():
-    """Display a thank-you message."""
-    return "Thank you! Your responses have been saved."
+            # Save the responses
+            save_to_csv(child_name, responses)
+
+            # Set the success message
+            success_message = "Your data has been successfully submitted."
+
+        # For "change_child", no data submission, no success message
+        # Just update selected_child and reload questions
+        selected_child = child_name
+        with open(CHILD_QUESTIONS_FILE, "r") as f:
+            child_questions = json.load(f)
+        questions = child_questions.get(selected_child, [])
+    else:
+        # Handle GET request
+        children = get_existing_children()
+        selected_child = children[0] if children else None
+        with open(CHILD_QUESTIONS_FILE, "r") as f:
+            child_questions = json.load(f)
+        questions = child_questions.get(selected_child, [])
+
+    # Reload the form (GET or POST)
+    children = get_existing_children()
+    return render_template(
+        "data_entry.html",
+        success_message=success_message,
+        children=children,
+        selected_child=selected_child,
+        questions=questions,
+        enumerate=enumerate
+    )
 
 @app.route('/trends')
 def view_trends():
@@ -387,8 +411,15 @@ def select_questions(child_name):
     if request.method == "POST":
         # Save selected predefined and custom questions
         selected_questions = request.form.getlist("questions")  # Predefined questions
-        custom_questions = request.form.getlist("custom_questions")  # Custom questions
-        child_questions[child_name] = selected_questions + custom_questions
+        updated_custom_questions = request.form.getlist("custom_questions")  # Edited custom questions
+        new_custom_question = request.form.get("new_custom_question")  # New custom question
+        new_custom_question_checkbox = request.form.get("new_custom_question_checkbox")
+
+        # Add the new custom question only if the checkbox is selected and the input is not empty
+        if new_custom_question and new_custom_question_checkbox:
+            updated_custom_questions.append(new_custom_question.strip())
+
+        child_questions[child_name] = selected_questions + updated_custom_questions
 
         # Save to JSON file
         with open(CHILD_QUESTIONS_FILE, "w") as f:
@@ -419,8 +450,9 @@ def select_questions(child_name):
         child_name=child_name,
         predefined_questions=PREDEFINED_QUESTIONS,
         selected_questions=predefined_questions,
-        custom_questions=custom_questions,
+        custom_questions=custom_questions,  # Send current custom questions
     )
+
 
 if __name__ == "__main__":
     initialize_csv()
