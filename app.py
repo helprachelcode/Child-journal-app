@@ -6,7 +6,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import json
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="static")
 
 # File to store selected questions for each child
 CHILD_QUESTIONS_FILE = "child_questions.json"
@@ -78,29 +78,27 @@ PREDEFINED_QUESTIONS = {
 # File to store the journal entries
 CSV_FILE = "child_journal.csv"
 
-# Questions for the daily journal
-QUESTIONS = [
-    "How many meltdowns did your child have today?",
-    "Did any meltdowns involve damaging property?",
-    "Did any meltdowns involve hurting themselves or others?",
-    "What led up to these meltdowns?",
-    "On a scale from 1-5, how well did your child eat today?",
-    "What time did they wake up?",
-    "What time did they fall asleep?",
-    "How many hours of sleep did they have last night?",
-    "How many hours did they nap?",
-    "Did they seem rested this morning?",
-]
 
 def initialize_csv():
-    """Ensure the CSV file exists and add missing headers."""
-    headers = ["Date/Time", "Child Name"] + QUESTIONS
+    """Ensure the CSV file exists and add missing headers dynamically."""
+    # Default headers
+    headers = ["Date/Time", "Child Name"]
+
+    # Load child-specific questions from the JSON file
+    if os.path.exists(CHILD_QUESTIONS_FILE):
+        with open(CHILD_QUESTIONS_FILE, "r") as f:
+            child_questions = json.load(f)
+            # Add all unique questions from all children
+            for child, questions in child_questions.items():
+                headers.extend(questions)
+            headers = list(set(headers))  # Remove duplicates and maintain unique headers
 
     if os.path.exists(CSV_FILE):
         # Read existing headers
         with open(CSV_FILE, mode="r", newline="") as file:
             reader = csv.reader(file)
-            existing_headers = next(reader, [])
+            rows = list(reader)  # Save existing rows
+            existing_headers = rows[0] if rows else []
 
         # Add missing headers
         for header in headers:
@@ -108,11 +106,10 @@ def initialize_csv():
                 existing_headers.append(header)
 
         # Rewrite the CSV with updated headers
-        rows = list(reader)  # Save existing rows
         with open(CSV_FILE, mode="w", newline="") as file:
             writer = csv.writer(file)
             writer.writerow(existing_headers)  # Write updated headers
-            writer.writerows(rows)  # Write back existing rows
+            writer.writerows(rows[1:])  # Write back existing rows, skipping the old header
     else:
         # Create a new file with the correct headers
         with open(CSV_FILE, mode="w", newline="") as file:
@@ -125,6 +122,11 @@ def save_to_csv(child_name, responses):
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+    # Load child-specific questions from JSON
+    with open(CHILD_QUESTIONS_FILE, "r") as f:
+        child_questions = json.load(f)
+    questions = child_questions.get(child_name, [])
+
     # Load existing data
     updated = False
     rows = []
@@ -134,7 +136,7 @@ def save_to_csv(child_name, responses):
         for row in reader:
             # Update the current child's entry if it matches the timestamp
             if row["Child Name"] == child_name and row["Date/Time"] == now:
-                for i, question in enumerate(QUESTIONS):
+                for i, question in enumerate(questions):
                     row[question] = responses[i] if i < len(responses) else row.get(question)
                 updated = True
             rows.append(row)
@@ -144,7 +146,7 @@ def save_to_csv(child_name, responses):
         new_row = {header: "" for header in headers}
         new_row["Date/Time"] = now
         new_row["Child Name"] = child_name
-        for i, question in enumerate(QUESTIONS):
+        for i, question in enumerate(questions):
             new_row[question] = responses[i] if i < len(responses) else ""
         rows.append(new_row)
 
@@ -243,16 +245,30 @@ def view_trends():
     plt.tight_layout()
     img_path = "static/trends.png"
     plt.savefig(img_path)
-    plt.close()
-    return f'<h1>Trends</h1><img src="/{img_path}" alt="Trends" style="max-width: 100%; height: auto;">'
+    plt.close()    
+    return (
+        f'<h1>Trends</h1>'
+        f'<img src="/{img_path}" alt="Trends" '
+        f'style="max-width: 100%; height: auto;">'
+    )
+    
+@app.route('/dashboard')
+def dashboard_overview():
+    """Dashboard overview page with a list of children."""
+    children = get_existing_children()
+    if not children:
+        return "No children available. Please add a child first."
+    return render_template("dashboard_overview.html", children=children)
 
-    @app.route('/dashboard', methods=["GET", "POST"])
-    def dashboard():
-        print("Dashboard route reached")  # Debugging
+@app.route('/dashboard/<child_name>')
+def child_dashboard(child_name):
+    """Child-specific dashboard showing charts based on selected questions."""
+    # Clear the static folder before generating new charts
+    clear_static_folder()
 
-        if not os.path.exists(CSV_FILE):
-            print("CSV file not found.")
-            return "No data available to visualize"
+    print(f"Dashboard for child: {child_name}")
+    if not os.path.exists(CSV_FILE):
+        return "No data available to visualize."
 
     # Read the CSV file
     try:
@@ -271,69 +287,76 @@ def view_trends():
         print(f"Error parsing dates: {e}")
         return f"Error parsing dates: {e}"
 
-    # Strip whitespace from the Child Name column
+    # Filter by child name
     df["Child Name"] = df["Child Name"].str.strip()
-    print("Child Name Column:\n", df["Child Name"].unique())  # Debug: Show unique child names
+    filtered_df = df[df["Child Name"] == child_name]
+    print(f"Filtered Data for {child_name}:\n", filtered_df)  # Debug: Show filtered data
 
-    # Get unique child names
-    child_names = sorted(df["Child Name"].dropna().unique())
-
-    # Get the selected child from the form or show data for all children
-    selected_child = request.form.get("child_name")  # Form data (POST)
-    if not selected_child:  # If no POST data, check query parameters (GET)
-        selected_child = request.args.get("child_name", "All")
-    print("Selected Child:", selected_child)  # Debug: Show selected child
-
-    # Filter the dataframe based on the selected child
-    if selected_child == "All":
-        filtered_df = df
-    else:
-        filtered_df = df if not selected_child or selected_child == "All" else df[df["Child Name"] == selected_child]
-        print(f"Filtered Data for {selected_child}:\n", filtered_df)  # Debugging
-
-    # Handle empty data for filtered children
     if filtered_df.empty:
-        print(f"No data available for {selected_child}.")
-        return render_template(
-            "dashboard.html",
-            children=child_names,
-            selected_child=selected_child,
-            charts=[]
-        )
+        return render_template("child_dashboard.html", child_name=child_name, charts=[])
 
     # Dynamically find questions for the child
     with open(CHILD_QUESTIONS_FILE, "r") as f:
         child_questions = json.load(f)
 
-    questions = []
-    if selected_child and selected_child in child_questions:
-        questions = child_questions[selected_child]
-    elif not selected_child or selected_child == "All":
-        questions = list(df.columns)[2:]  # Use all questions in the dataset for "All"
-
+    questions = child_questions.get(child_name, [])
     print("Selected Questions:", questions)  # Debug: Show questions for the child
 
-    # Generate bar charts for numeric columns (e.g., rating questions)
+    # Filter out empty or invalid questions
+    questions = [q for q in questions if q.strip() and q in filtered_df.columns and pd.api.types.is_numeric_dtype(filtered_df[q])]
+
+    # Generate line charts for numeric columns
     charts = []
+    import re
+
+    def sanitize_filename(filename):
+        """Sanitize a filename by removing special characters."""
+        filename = re.sub(r'[^\w\s]', '', filename)  # Remove all non-alphanumeric and non-space characters
+        filename = re.sub(r'\s+', '_', filename)    # Replace spaces with underscores
+        return filename
+
     for question in questions:
-        if question in filtered_df.columns and pd.api.types.is_numeric_dtype(filtered_df[question]):
-            chart_path = f"static/{'_'.join(question.split())}_chart.png"
-            filtered_df.groupby("Date")[question].mean().plot(kind="bar", title=question, figsize=(8, 5), color="skyblue")
+        # Generate the sanitized chart file path
+        sanitized_question = sanitize_filename(question)
+        chart_path = f"static/{child_name}_{sanitized_question}_chart.png"
+        try:
+            grouped_data = filtered_df.groupby("Date")[question].mean()
+            grouped_data.plot(kind="line", title=question, figsize=(10, 6), marker="o")
+
             plt.xlabel("Date")
             plt.ylabel("Average")
-            plt.xticks(rotation=30)
+            plt.xticks(rotation=45)
+
+            # Limit x-axis labels to reduce overcrowding
+            num_labels = 10  # Adjust this number as needed
+            if len(grouped_data) > num_labels:
+                step = max(1, len(grouped_data) // num_labels)
+                plt.gca().set_xticks(grouped_data.index[::step])
+
             plt.tight_layout()
             plt.savefig(chart_path)
             plt.close()
             charts.append({"title": question, "path": chart_path})
-            print(f"Generated chart for {question}: {chart_path}")  # Debug: Confirm chart generation
+            print(f"Generated chart for {question}: {chart_path}")
+        except Exception as e:
+            print(f"Error generating chart for {question}: {e}")
 
-    return render_template(
-        "dashboard.html",
-        children=child_names,
-        selected_child=selected_child,
-        charts=charts
-    )
+    return render_template("child_dashboard.html", child_name=child_name, charts=charts)
+
+def clear_static_folder():
+    """Delete all files in the static folder."""
+    STATIC_FOLDER = "static"
+    for filename in os.listdir(STATIC_FOLDER):
+        file_path = os.path.join(STATIC_FOLDER, filename)
+        try:
+            if os.path.isfile(file_path):  # Check if it's a file
+                os.unlink(file_path)  # Delete the file
+                print(f"Deleted: {file_path}")
+            elif os.path.isdir(file_path):  # Check if it's a directory (if necessary)
+                os.rmdir(file_path)  # Remove the directory
+                print(f"Deleted directory: {file_path}")
+        except Exception as e:
+            print(f"Failed to delete {file_path}: {e}")
 
 @app.route('/')
 def index():

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ child_name }}'s Dashboard</title>
+</head>
+    <style>
+        /* Make images responsive */
+        .chart img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+        }
+
+        /* Center charts and add some spacing */
+        .chart {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        /* Optional: Add styling for the title */
+        .chart h3 {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+    </style>_
+<body>
+    <h1>Dashboard for {{ child_name }}</h1>
+    {% if charts %}
+    {% for chart in charts %}
+        <div class="chart">
+            <h3>{{ chart.title }}</h3>
+            <img src="/static/{{ chart.path.split('/')[-1] }}" alt="{{ chart.title }}">
+        </div>
+    {% endfor %}
+    {% else %}
+        <p>No data available to display.</p>
+    {% endif %}
+    <a href="{{ url_for('dashboard_overview') }}">Back to Overview</a>
+</body>
+</html>

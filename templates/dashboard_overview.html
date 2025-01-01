@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard Overview</title>
+</head>
+<body>
+    <h1>Dashboard Overview</h1>
+    <ul>
+        {% for child in children %}
+            <li><a href="{{ url_for('child_dashboard', child_name=child) }}">{{ child }}</a></li>
+        {% endfor %}
+    </ul>
+    <a href="{{ url_for('data_entry') }}">Go to Data Entry</a>
+</body>
+</html>
