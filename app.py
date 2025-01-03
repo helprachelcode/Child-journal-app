@@ -251,30 +251,6 @@ def submit():
         questions=questions,
         enumerate=enumerate
     )
-
-@app.route('/trends')
-def view_trends():
-    """Generate and display trends."""
-    if not os.path.exists(CSV_FILE):
-        return "No data available to visualize."
-    df = pd.read_csv(CSV_FILE)
-    df["Date/Time"] = pd.to_datetime(df["Date/Time"])
-    df["Date"] = df["Date/Time"].dt.date
-    meltdowns_per_day = df.groupby("Date")["How many meltdowns did your child have today?"].sum()
-    plt.figure(figsize=(8, 5))
-    meltdowns_per_day.plot(kind="bar", color="skyblue", title="Meltdowns Per Day")
-    plt.xlabel("Date", fontsize=12)
-    plt.ylabel("Number of Meltdowns", fontsize=12)
-    plt.xticks(rotation=30, fontsize=10)
-    plt.tight_layout()
-    img_path = "static/trends.png"
-    plt.savefig(img_path)
-    plt.close()    
-    return (
-        f'<h1>Trends</h1>'
-        f'<img src="/{img_path}" alt="Trends" '
-        f'style="max-width: 100%; height: auto;">'
-    )
     
 @app.route('/dashboard')
 def dashboard_overview():
@@ -365,7 +341,28 @@ def child_dashboard(child_name):
         except Exception as e:
             print(f"Error generating chart for {question}: {e}")
 
-    return render_template("child_dashboard.html", child_name=child_name, charts=charts)
+    # Generate correlation heat map
+    numeric_columns = filtered_df.select_dtypes(include=['number'])
+    if not numeric_columns.empty:
+        correlation_matrix = numeric_columns.corr()
+        heatmap_path = f"static/{child_name}_heatmap.png"
+        try:
+            import seaborn as sns
+            plt.figure(figsize=(10, 8))
+            print("Generating heat map...")
+            sns.heatmap(correlation_matrix, annot=True, cmap="coolwarm", fmt=".2f")
+            print("Heat map generated. Saving chart...")
+            plt.title(f"Correlation Heatmap for {child_name}")
+            plt.savefig(heatmap_path)
+            print(f"Heat map saved at: {chart_path}")
+            plt.close()
+        except Exception as e:
+            heatmap_path = None
+            print(f"Error generating heatmap: {e}")
+    else:
+        heatmap_path = None
+
+    return render_template("child_dashboard.html", child_name=child_name, charts=charts, heatmap_path=heatmap_path)
 
 def clear_static_folder():
     """Delete all files in the static folder."""

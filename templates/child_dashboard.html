@@ -26,6 +26,7 @@
     </style>_
 <body>
     <h1>Dashboard for {{ child_name }}</h1>
+    <!-- Line Charts -->
     {% if charts %}
     {% for chart in charts %}
         <div class="chart">
@@ -36,6 +37,13 @@
     {% else %}
         <p>No data available to display.</p>
     {% endif %}
+    
+    <!-- Heat Map -->
+    {% if heatmap_path %}
+        <h2>Correlation Heatmap</h2>
+    <img src="/static/{{ heatmap_path.split('/')[-1] }}" alt="Correlation Heatmap">
+    {% endif %}
+
     <a href="{{ url_for('dashboard_overview') }}">Back to Overview</a>
 </body>
 </html>
