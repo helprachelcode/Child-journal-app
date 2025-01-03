@@ -7,93 +7,152 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            line-height: 1.6;
+            background-color: #f3f4f6;
             margin: 0;
             padding: 0;
-            background-color: #f9f9f9;
             color: #333;
+        }
+        .header {
+            background-color: #2c3e50; /* Dark header background */
+            color: white;
+            padding: 15px 20px;
+            text-align: center;
+        }
+        .nav-bar {
+            background-color: #e3e3e3; /* Light gray background for nav bar */
+            padding: 10px 0;
+        }
+        .nav-buttons {
+            display: flex;
+            justify-content: center;
+        }
+        .nav-buttons a {
+            color: #2c3e50; /* Matches the header text */
+            text-decoration: none;
+            margin: 5px 10px;
+            padding: 8px 15px;
+            background-color: #ffffff; /* White buttons for contrast */
+            border: 1px solid #2c3e50;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .nav-buttons a:hover {
+            background-color: #f3f3f3; /* Slightly darker for hover effect */
         }
         .container {
             max-width: 800px;
             margin: 20px auto;
             padding: 20px;
-            background: #fff;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            background-color: #ffffff;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             border-radius: 8px;
         }
-        h1, h2, h3 {
-            color: #444;
+        h2, h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
         }
         form {
             margin-top: 20px;
         }
-        label {
-            display: inline-block;
-            margin-left: 10px;
-        }
-        input[type="checkbox"] {
-            margin-right: 10px;
+        .section {
+            margin-bottom: 20px;
         }
         .question-block {
-            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             padding: 10px;
-            background: #f1f1f1;
-            border: 1px solid #ddd;
+            background-color: #f9fafb;
+            border: 1px solid #e5e7eb;
             border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        .question-block label {
+            margin: 0;
+            font-weight: 500;
         }
         .button-container {
             text-align: center;
             margin-top: 20px;
         }
         button {
-            padding: 10px 20px;
-            background: #007BFF;
-            color: #fff;
+            background-color: #2c3e50;
+            color: white;
             border: none;
+            padding: 10px 20px;
+            font-size: 16px;
             border-radius: 5px;
             cursor: pointer;
-            font-size: 16px;
         }
         button:hover {
-            background: #0056b3;
+            background-color: #1d2c38;
+        }
+        input[type="checkbox"] {
+            margin-right: 10px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            border: 1px solid #d1d5db;
+            border-radius: 5px;
+            font-size: 14px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="header">
         <h1>Question Selection for {{ child_name }}</h1>
-        <form method="POST" action="">
-            <h2>Predefined Questions</h2>
-            {% for category, questions in predefined_questions.items() %}
-                <h3>{{ category }}</h3>
-                <div>
-                    {% for question in questions %}
-                        <div class="question-block">
-                            <input type="checkbox" name="questions" value="{{ question }}"
-                                   {% if question in selected_questions[category] %}checked{% endif %}>
-                            <label>{{ question }}</label>
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endfor %}
+    </div>
 
-            <h2>Current Custom Questions</h2>
-            {% if custom_questions %}
-                {% for question in custom_questions %}
-                    <div class="question-block">
-                        <input type="checkbox" name="custom_questions" value="{{ question }}" checked>
-                        <label>{{ question }}</label>
+    <div class="nav-buttons">
+        <a href="{{ url_for('index') }}">Home</a>
+        <a href="{{ url_for('data_entry') }}">Data Entry</a>
+        <a href="{{ url_for('child_dashboard', child_name=child_name) }}">Dashboard</a>
+    </div>
+
+    <div class="container">
+        <form method="POST" action="">
+            <div class="section">
+                <h2>Predefined Questions</h2>
+                {% for category, questions in predefined_questions.items() %}
+                    <h3>{{ category }}</h3>
+                    <div>
+                        {% for question in questions %}
+                            <div class="question-block">
+                                <label>
+                                    <input type="checkbox" name="questions" value="{{ question }}"
+                                           {% if question in selected_questions[category] %}checked{% endif %}>
+                                    {{ question }}
+                                </label>
+                            </div>
+                        {% endfor %}
                     </div>
                 {% endfor %}
-            {% else %}
-                <p>No custom questions added yet.</p>
-            {% endif %}
+            </div>
 
-            <h2>Add a New Custom Question</h2>
-            <div class="question-block">
-                <label for="new_custom_question">Custom Question:</label><br>
-                <input type="text" name="new_custom_question" id="new_custom_question" 
-                       placeholder="Enter your question here" style="width: 100%; margin-top: 5px;">
+            <div class="section">
+                <h2>Current Custom Questions</h2>
+                {% if custom_questions %}
+                    {% for question in custom_questions %}
+                        <div class="question-block">
+                            <label>
+                                <input type="checkbox" name="custom_questions" value="{{ question }}" checked>
+                                {{ question }}
+                            </label>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p style="color: #6b7280;">No custom questions added yet.</p>
+                {% endif %}
+            </div>
+
+            <div class="section">
+                <h2>Add a New Custom Question</h2>
+                <div class="question-block">
+                    <label for="new_custom_question">Custom Question:</label><br>
+                    <input type="text" name="new_custom_question" id="new_custom_question" placeholder="Enter your question here">
+                </div>
                 <div style="margin-top: 10px;">
                     <input type="checkbox" name="new_custom_question_checkbox" id="new_custom_question_checkbox" value="yes">
                     <label for="new_custom_question_checkbox">Include this custom question</label>

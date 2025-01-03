@@ -254,11 +254,43 @@ def submit():
     
 @app.route('/dashboard')
 def dashboard_overview():
-    """Dashboard overview page with a list of children."""
+    """Dashboard overview page with a list of children and their summary data."""
     children = get_existing_children()
     if not children:
         return "No children available. Please add a child first."
-    return render_template("dashboard_overview.html", children=children)
+
+    # Initialize children_data dictionary
+    children_data = {}
+
+    # Read the CSV file
+    if os.path.exists(CSV_FILE):
+        df = pd.read_csv(CSV_FILE)
+        df["Date/Time"] = pd.to_datetime(df["Date/Time"], errors="coerce")
+        df["Date"] = df["Date/Time"].dt.date  # Extract just the date
+
+        for child in children:
+            child_data = df[df["Child Name"] == child]
+            if not child_data.empty:
+                num_entries = len(child_data)
+                date_range = [
+                    child_data["Date"].min().strftime("%m/%d/%y"),
+                    child_data["Date"].max().strftime("%m/%d/%y"),
+                ]
+                average_scores = child_data.mean(numeric_only=True).dropna().round(2).to_dict()
+                children_data[child] = {
+                    "num_entries": num_entries,
+                    "date_range": date_range,
+                    "average_scores": average_scores,
+                }
+            else:
+                children_data[child] = {
+                    "num_entries": 0,
+                    "date_range": ["N/A", "N/A"],
+                    "average_scores": {},
+                }
+
+    return render_template("dashboard_overview.html", children_data=children_data)
+
 
 @app.route('/dashboard/<child_name>')
 def child_dashboard(child_name):
@@ -348,11 +380,38 @@ def child_dashboard(child_name):
         heatmap_path = f"static/{child_name}_heatmap.png"
         try:
             import seaborn as sns
-            plt.figure(figsize=(10, 8))
+            plt.figure(figsize=(12, 10))
+
+            # Filter low correlations
+            threshold = 0.3
+            filtered_corr = correlation_matrix.mask(correlation_matrix.abs() < threshold)
+ 
+            # Shorten labels
+            max_label_length = 15
+            short_labels = {
+                col: (col[:max_label_length] + "...") if len(col) > max_label_length else col
+                for col in correlation_matrix.columns
+            }
+            filtered_corr.rename(columns=short_labels, index=short_labels, inplace=True)
+
+            # Drop insignificant rows/columns
+            filtered_corr = filtered_corr.dropna(how="all", axis=0).dropna(how="all", axis=1)
+        
+            correlation_matrix.rename(columns=short_labels, index=short_labels, inplace=True)
             print("Generating heat map...")
-            sns.heatmap(correlation_matrix, annot=True, cmap="coolwarm", fmt=".2f")
+            sns.heatmap(
+                filtered_corr,
+                annot=True,                # Display correlation values
+                fmt=".2f",                 # Limit decimal places
+                cmap="coolwarm",           # Use a perceptually uniform colormap
+                cbar=True,                 # Display color bar
+                annot_kws={"size": 10},    # Annotation font size
+            )
             print("Heat map generated. Saving chart...")
-            plt.title(f"Correlation Heatmap for {child_name}")
+            plt.title(f"Correlation Heatmap for {child_name}", fontsize=16)
+            plt.xticks(rotation=45, ha="right", fontsize=10)  # Rotate x-axis labels
+            plt.yticks(rotation=0, fontsize=10)              # Keep y-axis labels horizontal
+            plt.tight_layout()
             plt.savefig(heatmap_path)
             print(f"Heat map saved at: {chart_path}")
             plt.close()

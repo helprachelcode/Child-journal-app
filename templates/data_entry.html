@@ -3,60 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Child Data Entry</title>
-</head>
-<body>
-    <!-- Navigation Buttons -->
-    <div style="margin-bottom: 20px;">
-        <a href="{{ url_for('index') }}">Home</a> |
-        <a href="{{ url_for('select_questions', child_name=selected_child) }}">Edit Questions</a> |
-        <a href="{{ url_for('child_dashboard', child_name=selected_child) }}">View Dashboard</a>
-    </div>
+    <style>
+        header {
+        background: #2c3e50;
+        color: white;
+        padding: 1rem 0;
+        text-align: center;
+    }
 
+    nav {
+        background: #34495e;
+        padding: 10px;
+        text-align: center;
+    }
+
+    nav a {
+        color: #fff;
+        text-decoration: none;
+        margin: 0 10px;
+        padding: 5px 10px;
+        border-radius: 5px;
+    }
+
+    nav a:hover {
+        background: #2c3e50;
+    }
+
+    .container {
+        max-width: 800px;
+        margin: 20px auto;
+        padding: 20px;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+    }
+
+    input, select, button {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 15px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+    }
+
+    button {
+        background: #3498db;
+        color: white;
+        font-size: 1rem;
+        border: none;
+        cursor: pointer;
+    }
+
+    button:hover {
+        background: #2980b9;
+    }
+
+    .success-message {
+        color: green;
+        font-weight: bold;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+</style>
+<!-- Navigation Buttons -->
+<nav>
+    <a href="{{ url_for('index') }}">Home</a>
+    <a href="{{ url_for('select_questions', child_name=selected_child) }}">Edit Questions</a>
+    <a href="{{ url_for('child_dashboard', child_name=selected_child) }}">View Dashboard</a>
+</nav>
+
+<div class="container">
     <!-- Success Message -->
     {% if success_message %}
-        <div style="color: green; font-weight: bold; margin-bottom: 20px;">
+        <div class="success-message">
             {{ success_message }}
         </div>
     {% endif %}
-<form method="POST" action="{{ url_for('submit') }}">
-    <!-- Child selection -->
-    <label for="child_name">Select Child:</label>
-    <select name="child_name" id="child_name" onchange="this.form.action_type.value='change_child'; this.form.submit();" required>
-        {% for child in children %}
-            <option value="{{ child }}" {% if child == selected_child %}selected{% endif %}>
-                {{ child }}
-            </option>
+
+    <form method="POST" action="{{ url_for('submit') }}">
+        <!-- Child selection -->
+        <label for="child_name">Select Child:</label>
+        <select name="child_name" id="child_name" onchange="this.form.action_type.value='change_child'; this.form.submit();" required>
+            {% for child in children %}
+                <option value="{{ child }}" {% if child == selected_child %}selected{% endif %}>
+                    {{ child }}
+                </option>
+            {% endfor %}
+        </select>
+
+        <!-- Hidden input to specify action type -->
+        <input type="hidden" name="action_type" value="submit_data">
+
+        <!-- Questions -->
+        {% for idx, question in enumerate(questions) %}
+            <div>
+                <label for="q{{ idx }}">{{ question }}</label>
+                {% if question.lower().startswith("on a scale of 1–5") %}
+                    <select name="q{{ idx }}" id="q{{ idx }}">
+                        <option value="">--Select--</option>
+                        {% for value in range(1, 6) %}
+                            <option value="{{ value }}">{{ value }}</option>
+                        {% endfor %}
+                    </select>
+                {% elif question.lower().startswith("did") %}
+                    <select name="q{{ idx }}" id="q{{ idx }}">
+                        <option value="">--Select--</option>
+                        <option value="1">Yes</option>
+                        <option value="0">No</option>
+                    </select>
+                {% else %}
+                    <input type="text" name="q{{ idx }}" id="q{{ idx }}">
+                {% endif %}
+            </div>
         {% endfor %}
-    </select>
 
-    <!-- Hidden input to specify action type -->
-    <input type="hidden" name="action_type" value="submit_data">
-
-    <!-- Questions -->
-    {% for idx, question in enumerate(questions) %}
-        <div>
-            <label for="q{{ idx }}">{{ question }}</label>
-            {% if question.lower().startswith("on a scale of 1–5") %}
-                <select name="q{{ idx }}" id="q{{ idx }}">
-                    <option value="">--Select--</option>
-                    {% for value in range(1, 6) %}
-                        <option value="{{ value }}">{{ value }}</option>
-                    {% endfor %}
-                </select>
-            {% elif question.lower().startswith("did") %}
-                <select name="q{{ idx }}" id="q{{ idx }}">
-                    <option value="">--Select--</option>
-                    <option value="1">Yes</option>
-                    <option value="0">No</option>
-                </select>
-            {% else %}
-                <input type="text" name="q{{ idx }}" id="q{{ idx }}">
-            {% endif %}
-        </div>
-    {% endfor %}
-
-    <button type="submit" onclick="this.form.action_type.value='submit_data';">Submit</button>
-</form>
-</body>
-    </html>
+        <button type="submit" onclick="this.form.action_type.value='submit_data';">Submit</button>
+    </form>
+</div>

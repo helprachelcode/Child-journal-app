@@ -1,15 +1,119 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Overview</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #fff;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        .child-summary {
+            margin-bottom: 20px;
+        }
+        .accordion {
+            cursor: pointer;
+            background: #2c3e50;
+            color: #fff;
+            padding: 10px 15px;
+            border: none;
+            outline: none;
+            text-align: left;
+            font-size: 16px;
+            border-radius: 5px;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .accordion .icon {
+            margin-left: 10px; /* Adds space between the text and the triangle */
+            display: inline-block; /* Ensures proper spacing behavior */
+        }
+        .accordion:hover {
+            background: #34495e;
+        }
+
+        .panel {
+            padding: 0 15px;
+            display: none;
+            overflow: hidden;
+            background-color: #f9f9f9;
+            margin-bottom: 15px;
+            border-left: 3px solid #2c3e50;
+        }
+        ul {
+            list-style-type: none;
+            padding-left: 15px;
+        }
+        ul li {
+            margin-bottom: 5px;
+        }
+        .dashboard-link {
+            color: #007BFF;
+            text-decoration: none;
+        }
+        .dashboard-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const accordions = document.querySelectorAll(".accordion");
+            accordions.forEach((accordion) => {
+                accordion.addEventListener("click", () => {
+                    accordion.classList.toggle("active");
+                    const panel = accordion.nextElementSibling;
+                    const icon = accordion.querySelector(".icon");
+                    if (panel.style.display === "block") {
+                        panel.style.display = "none";
+                        icon.textContent = "▶";
+                    } else {
+                        panel.style.display = "block";
+                        icon.textContent = "▼";
+                    }
+                });
+            });
+        });
+    </script>
 </head>
 <body>
-    <h1>Dashboard Overview</h1>
-    <ul>
-        {% for child in children %}
-            <li><a href="{{ url_for('child_dashboard', child_name=child) }}">{{ child }}</a></li>
+    <div class="container">
+        <h1>Dashboard Overview</h1>
+        {% for child, stats in children_data.items() %}
+            <div class="child-summary">
+                <button class="accordion">
+                    {{ child }} - {{ stats.num_entries }} entries from {{ stats.date_range[0] }} to {{ stats.date_range[1] }}
+
+                    <span class="icon">▶</span>
+                </button>
+                <div class="panel">
+                    <ul>
+                        {% for question, avg in stats.average_scores.items() %}
+                            <li>{{ question }}: {{ avg }}</li>
+                        {% endfor %}
+                    </ul>
+                    <a class="dashboard-link" href="/dashboard/{{ child }}">View Full Dashboard for {{ child }}</a>
+                </div>
+            </div>
         {% endfor %}
-    </ul>
-    <a href="{{ url_for('data_entry') }}">Go to Data Entry</a>
+    </div>
 </body>
 </html>
